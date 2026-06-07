@@ -1,0 +1,18 @@
+# Ignore environment files containing secrets
+.env
+.env.*
+
+# Ignore docker-compose with secrets if accidentally added
+docker-compose.yml
+
+# Node / build
+node_modules/
+dist/
+build/
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
