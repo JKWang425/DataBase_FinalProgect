@@ -1,4 +1,4 @@
-USE clinic_db;
+USE clinicdb;
 
 -- 範例科別
 INSERT INTO Department (department_name) VALUES ('內科'), ('外科'), ('兒科')

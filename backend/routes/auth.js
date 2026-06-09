@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 router.post('/register', async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password, role, id_number } = req.body;
   if (!username || !password || !role) return res.status(400).json({ error: 'Missing fields' });
   
   let conn;
@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
 
     // 根據角色自動建立對應的 Profile
     if (role === 'Patient') {
-      await conn.execute('INSERT INTO Patients (user_id, name) VALUES (?, ?)', [newUserId, username]);
+      await conn.execute('INSERT INTO Patients (user_id, name, id_number) VALUES (?, ?, ?)', [newUserId, username, id_number || null]);
     } else if (role === 'Doctor') {
       // 假設預設科別為 1 (請確保 Department 表中有 ID 為 1 的紀錄)
       await conn.execute('INSERT INTO Doctors (user_id, doctor_name, department_id) VALUES (?, ?, 1)', [newUserId, username]);
@@ -41,6 +41,9 @@ router.post('/register', async (req, res) => {
       conn.release();
     }
     console.error(err);
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: '使用者名稱已存在，請更換帳號或直接登入' });
+    }
     return res.status(500).json({ error: 'DB error' });
   }
 });

@@ -51,7 +51,7 @@ export default function PatientPanel({ patientId }) {
   return (
     <div>
       <h3>病患面板</h3>
-      <div style={{ marginBottom: '20px', display:'flex', gap:'10px' }}>
+      <div className="panel-actions">
         <button className={activeTab === 'book' ? 'btn primary' : 'btn ghost'} onClick={() => setActiveTab('book')}>預約掛號</button>
         <button className={activeTab === 'myAppts' ? 'btn primary' : 'btn ghost'} onClick={() => setActiveTab('myAppts')}>我的掛號</button>
         <button className={activeTab === 'records' ? 'btn primary' : 'btn ghost'} onClick={() => setActiveTab('records')}>歷史紀錄</button>
@@ -64,9 +64,9 @@ export default function PatientPanel({ patientId }) {
       )}
 
       {activeTab === 'myAppts' && (
-        <div className="card">
+        <div className="card table-card">
           <h4>我的掛號</h4>
-          <table style={{ width: '100%' }}>
+          <table>
             <thead>
               <tr>
                 <th>日期</th>
@@ -101,9 +101,9 @@ export default function PatientPanel({ patientId }) {
       )}
 
       {activeTab === 'records' && (
-        <div className="card">
+        <div className="card table-card">
           <h4>歷史看診紀錄</h4>
-          <table style={{ width: '100%' }}>
+          <table>
             <thead>
               <tr>
                 <th>日期</th>

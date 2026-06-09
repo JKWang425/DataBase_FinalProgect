@@ -43,12 +43,14 @@ export default function App() {
         )}
       </div>
 
-      <div className="card">
-        {!user ? (
+      {!user ? (
+        <div className="auth-page">
           <div className="auth-card">
             <Login onLogin={handleLogin} />
           </div>
-        ) : (
+        </div>
+      ) : (
+        <div className="card">
           <div className="grid">
             <div style={{flex: 1}}>
               {user.role === 'Patient' && <PatientPanel patientId={user.userId} />}
@@ -56,8 +58,8 @@ export default function App() {
               {user.role === 'Staff' && <StaffPanel />}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

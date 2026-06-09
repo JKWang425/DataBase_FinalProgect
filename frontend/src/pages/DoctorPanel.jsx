@@ -54,9 +54,9 @@ export default function DoctorPanel(){
   return (
     <div>
       <h3>醫師面板：今日待診名單</h3>
-      <div className="card">
-        <table style={{width:'100%'}}>
-          <thead><tr><th>appt_no</th><th>patient</th><th>status</th><th>action</th></tr></thead>
+      <div className="card table-card">
+        <table>
+          <thead><tr><th>掛號號碼</th><th>病患</th><th>狀態</th><th>處理</th></tr></thead>
           <tbody>
             {queue.map(q=> (
               <tr key={q.appt_id}>
