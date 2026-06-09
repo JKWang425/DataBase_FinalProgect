@@ -1,7 +1,19 @@
 USE clinicdb;
 
 -- 範例科別
-INSERT INTO Department (department_name) VALUES ('內科'), ('外科'), ('兒科')
+INSERT INTO Department (department_name) VALUES 
+('內科'), 
+('外科'), 
+('兒科'),
+('家醫科'),
+('耳鼻喉科'),
+('皮膚科'),
+('眼科'),
+('牙科'),
+('骨科'),
+('婦產科'),
+('復健科'),
+('泌尿科')
 ON DUPLICATE KEY UPDATE department_name = department_name;
 
 -- IMPORTANT: 移除 seed 中的明文密碼與直接建立帳號的動作，
@@ -12,9 +24,5 @@ ON DUPLICATE KEY UPDATE department_name = department_name;
 
 -- 為避免在公開 repo 洩漏密碼，seed 檔只保留非敏感的資料或操作說明。
 -- 範例：只建立科別，實際帳號請透過註冊 API 建立。
-
--- 範例科別（保留）
-INSERT INTO Department (department_name) VALUES ('內科'), ('外科'), ('兒科')
-ON DUPLICATE KEY UPDATE department_name = department_name;
 
 -- 若你需要自動化建立測試帳號，建議改用後端 script（使用 bcrypt.hash）或透過 API 呼叫。

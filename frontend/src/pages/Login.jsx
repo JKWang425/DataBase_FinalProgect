@@ -51,7 +51,7 @@ export default function Login({ onLogin }) {
           <p className="auth-subtitle">請輸入帳號與密碼，快速進入預約系統。</p>
           <form onSubmit={handleLogin} className="auth-form">
             <div className="form-row">
-              <input placeholder="帳號 (username)" value={username} onChange={e => setUsername(e.target.value)} />
+              <input type="text" placeholder="帳號 (username)" value={username} onChange={e => setUsername(e.target.value)} />
             </div>
             <div className="form-row">
               <input placeholder="密碼 (password)" type="password" value={password} onChange={e => setPassword(e.target.value)} />
@@ -70,7 +70,7 @@ export default function Login({ onLogin }) {
           <p className="auth-subtitle">建立帳號後即可使用掛號、查詢與取消功能。</p>
           <form onSubmit={handleRegister} className="auth-form">
             <div className="form-row">
-              <input placeholder="帳號 (username)" value={username} onChange={e => setUsername(e.target.value)} required />
+              <input type="text" placeholder="帳號 (username)" value={username} onChange={e => setUsername(e.target.value)} required />
             </div>
             <div className="form-row">
               <input placeholder="密碼 (password)" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
@@ -87,7 +87,7 @@ export default function Login({ onLogin }) {
             </div>
             {role === 'Patient' && (
               <div className="form-row">
-                <input placeholder="身分證字號 (id_number)" value={idNumber} onChange={e => setIdNumber(e.target.value)} required />
+                <input type="text" placeholder="身分證字號 (id_number)" value={idNumber} onChange={e => setIdNumber(e.target.value)} required />
               </div>
             )}
             <div className="form-row">

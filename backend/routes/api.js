@@ -79,6 +79,50 @@ router.post('/login', async (req, res) => {
     }
   });
 
+  /**
+   * DELETE /api/users/:id
+   * 櫃台刪除使用者帳號
+   */
+  router.delete('/users/:id', authenticateToken, requireRole(['Staff']), async (req, res) => {
+    const userId = req.params.id;
+    let conn;
+    try {
+      conn = await pool.getConnection();
+      await conn.beginTransaction();
+
+      // 先查出該使用者的角色
+      const [uRows] = await conn.execute('SELECT role FROM Users WHERE user_id = ? FOR UPDATE', [userId]);
+      const user = uRows[0];
+      if (!user) {
+        await conn.rollback();
+        conn.release();
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // 若為 Patient，需確保刪除其 Appointments 與 MedicalRecords (如果有設定 Foreign Key Cascade 就不用，但保險起見手動刪或讓 DB 處理)
+      // 若 DB 有設定 ON DELETE CASCADE，則只需刪除 Users 即可
+      // 我們直接嘗試刪除 Users，讓 ON DELETE CASCADE 處理關聯表，或手動刪除角色表
+      if (user.role === 'Patient') {
+        await conn.execute('DELETE FROM Patients WHERE user_id = ?', [userId]);
+      } else if (user.role === 'Doctor') {
+        await conn.execute('DELETE FROM Doctors WHERE user_id = ?', [userId]);
+      } else if (user.role === 'Staff') {
+        await conn.execute('DELETE FROM Staffs WHERE user_id = ?', [userId]);
+      }
+
+      await conn.execute('DELETE FROM Users WHERE user_id = ?', [userId]);
+
+      await conn.commit();
+      conn.release();
+      return res.json({ ok: true });
+    } catch (err) {
+      try { if (conn) await conn.rollback(); } catch (rb) { console.error(rb); }
+      if (conn) conn.release();
+      console.error(err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
 module.exports = router;
 
 /**
