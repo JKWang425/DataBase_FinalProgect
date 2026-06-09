@@ -5,7 +5,7 @@ WORKDIR /app
 
 # 複製 package.json 並安裝依賴
 COPY package.json package-lock.json* ./
-RUN npm install --production
+RUN npm install
 
 # 複製專案原始碼
 COPY . .

@@ -19,6 +19,20 @@ export default function UserList() {
     }
   }
 
+  async function handleDelete(userId) {
+    if (!window.confirm(`確定要刪除 User ID: ${userId} 的帳號嗎？此操作無法復原。`)) {
+      return;
+    }
+    try {
+      await api.delete(`/api/users/${userId}`);
+      setMsg('刪除成功');
+      fetchUsers(); // 重新載入名單
+    } catch (err) {
+      console.error(err);
+      setMsg('刪除失敗');
+    }
+  }
+
   return (
     <div>
       <h4>使用者名單 (所有人的 ID)</h4>
@@ -32,6 +46,7 @@ export default function UserList() {
               <th>詳細 ID (Patient/Doctor/Staff)</th>
               <th>身分證字號</th>
               <th>姓名</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -60,12 +75,15 @@ export default function UserList() {
                   <td>{detailId}</td>
                   <td>{idNumber}</td>
                   <td>{name}</td>
+                  <td>
+                    <button className="btn error" style={{ backgroundColor: 'red', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }} onClick={() => handleDelete(u.user_id)}>刪除</button>
+                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
-        {msg && <p className="status" style={{ color: 'red' }}>{msg}</p>}
+        {msg && <p className="status">{msg}</p>}
       </div>
     </div>
   )

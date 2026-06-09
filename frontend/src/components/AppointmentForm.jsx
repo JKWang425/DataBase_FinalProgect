@@ -4,38 +4,36 @@ import api from '../api';
 /*
   病患線上預約掛號元件
   - props:
-    - patientId: 目前病患的 patient_id（由上層登入流程或 context 提供）
-  功能：載入可用的排班（從 /schedules），讓使用者選擇科別、醫師、日期，送出後呼叫 /api/appointments
+    - patientId: 目前病患的 patient_id
 */
 export default function AppointmentForm({ patientId }) {
-  // 元件狀態宣告
-  const [schedules, setSchedules] = useState([]); // 原始排班資料
-  const [departments, setDepartments] = useState([]); // 科別清單（字串陣列）
-  const [doctors, setDoctors] = useState([]); // 醫師清單（依科別過濾）
-
+  const [schedules, setSchedules] = useState([]); 
+  const [departments, setDepartments] = useState([]); 
+  const [doctors, setDoctors] = useState([]); 
+  
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
 
   const [statusMessage, setStatusMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // componentDidMount: 載入 /schedules
   useEffect(() => {
-    // 使用 useEffect 執行一次的非同步載入
     let mounted = true;
     async function fetchSchedules() {
       try {
         const resp = await api.get('/schedules');
         if (!mounted) return;
-        setSchedules(resp.data || []);
+        const data = resp.data || [];
+        setSchedules(data);
 
-        // 從 schedules 中提取唯一的 department 與 doctor
         const deps = [];
         const docs = [];
-        (resp.data || []).forEach((s) => {
-          if (s.department_name && !deps.includes(s.department_name)) deps.push(s.department_name);
-          if (s.doctor_name && !docs.find(d => d.doctor_name === s.doctor_name && d.department_name === s.department_name)) {
+        data.forEach((s) => {
+          if (s.department_name && !deps.includes(s.department_name)) {
+            deps.push(s.department_name);
+          }
+          if (s.doctor_name && !docs.find(d => d.doctor_id === s.doctor_id)) {
             docs.push({ doctor_name: s.doctor_name, doctor_id: s.doctor_id, department_name: s.department_name });
           }
         });
@@ -50,16 +48,17 @@ export default function AppointmentForm({ patientId }) {
     return () => { mounted = false; };
   }, []);
 
-  // 當選擇科別時，過濾醫師選單
+  // 當科別改變時，清空已選醫師與排班
   useEffect(() => {
-    if (!selectedDept) return;
-    const filtered = doctors.filter(d => d.department_name === selectedDept);
-    // 如果只有一位醫師也自動選取
-    setDoctors(prev => prev); // 保持 doctors 原始清單（state 已存），此處不覆寫
-    if (filtered.length === 1) setSelectedDoctor(filtered[0].doctor_id);
+    setSelectedDoctor('');
+    setSelectedScheduleId('');
   }, [selectedDept]);
 
-  // 送出預約表單
+  // 當醫師改變時，清空已選排班
+  useEffect(() => {
+    setSelectedScheduleId('');
+  }, [selectedDoctor]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatusMessage('');
@@ -67,15 +66,8 @@ export default function AppointmentForm({ patientId }) {
       setStatusMessage('缺少 patientId，請先登入');
       return;
     }
-    if (!selectedDoctor || !selectedDate) {
-      setStatusMessage('請選擇醫師與日期');
-      return;
-    }
-
-    // 在 schedules 中尋找符合醫師與日期的 schedule_id
-    const matched = schedules.find(s => String(s.doctor_id) === String(selectedDoctor) && s.work_date === selectedDate);
-    if (!matched) {
-      setStatusMessage('該日期無可用排班');
+    if (!selectedScheduleId) {
+      setStatusMessage('請選擇看診時段');
       return;
     }
 
@@ -83,18 +75,18 @@ export default function AppointmentForm({ patientId }) {
     try {
       const resp = await api.post('/api/appointments', {
         patient_id: patientId,
-        schedule_id: matched.schedule_id,
+        schedule_id: selectedScheduleId,
       });
-      // 成功回應時範例格式: { appt_id, appt_no }
       if (resp.data && resp.data.appt_id) {
         setStatusMessage('預約成功！號碼：' + resp.data.appt_no);
         window.alert('預約成功！號碼：' + resp.data.appt_no);
+        // 重置表單
+        setSelectedDept('');
       } else {
         setStatusMessage('預約成功（回傳格式非預期）');
       }
     } catch (err) {
       console.error(err);
-      // 偵測常見錯誤訊息
       const msg = err?.response?.data?.error || err.message || '發生錯誤';
       if (msg === 'Schedule full') {
         setStatusMessage('該時段名額已滿');
@@ -107,6 +99,23 @@ export default function AppointmentForm({ patientId }) {
       setLoading(false);
     }
   };
+
+  // 過濾出的醫師與排班
+  const filteredDoctors = doctors.filter(doc => !selectedDept || doc.department_name === selectedDept);
+  const availableSchedules = schedules.filter(s => String(s.doctor_id) === String(selectedDoctor));
+
+  if (schedules.length === 0) {
+    return (
+      <div>
+        <h3>線上預約掛號</h3>
+        <div className="card" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+          目前沒有任何可預約的門診排班。<br />
+          (提示：請先使用 Staff (櫃台) 帳號登入，並建立「門診排班」後，病患才能進行掛號)
+        </div>
+        {statusMessage && <p className="status">{statusMessage}</p>}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -124,21 +133,32 @@ export default function AppointmentForm({ patientId }) {
 
         <div className="form-row">
           <label>醫師：</label>
-          <select value={selectedDoctor} onChange={e => setSelectedDoctor(e.target.value)}>
-            <option value="">請先選擇科別</option>
-            {doctors.filter(doc => !selectedDept || doc.department_name === selectedDept).map(doc => (
+          <select value={selectedDoctor} onChange={e => setSelectedDoctor(e.target.value)} disabled={!selectedDept && filteredDoctors.length === 0}>
+            <option value="">請選擇醫師</option>
+            {filteredDoctors.map(doc => (
               <option key={doc.doctor_id} value={doc.doctor_id}>{doc.doctor_name}</option>
             ))}
           </select>
         </div>
 
         <div className="form-row">
-          <label>看診日期：</label>
-          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+          <label>看診時段：</label>
+          <select value={selectedScheduleId} onChange={e => setSelectedScheduleId(e.target.value)} disabled={!selectedDoctor}>
+            <option value="">請選擇日期與時段</option>
+            {availableSchedules.map(s => {
+              const dateStr = new Date(s.work_date).toLocaleDateString();
+              const isFull = s.current_count >= s.max_limit;
+              return (
+                <option key={s.schedule_id} value={s.schedule_id} disabled={isFull}>
+                  {dateStr} - {s.time_slot} (診間 {s.room_no}) {isFull ? '- 已額滿' : `(已預約: ${s.current_count}/${s.max_limit})`}
+                </option>
+              );
+            })}
+          </select>
         </div>
 
         <div className="appointment-actions">
-          <button className="btn primary" type="submit" disabled={loading}>{loading ? '送出中...' : '送出預約'}</button>
+          <button className="btn primary" type="submit" disabled={loading || !selectedScheduleId}>{loading ? '送出中...' : '送出預約'}</button>
         </div>
       </form>
 
