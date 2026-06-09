@@ -84,16 +84,24 @@ module.exports = router;
 /**
  * POST /api/appointments
  * 建立新的預約掛號（使用 Transaction 確保資料一致性）
- * 接收 JSON body: { patient_id, schedule_id }
+ * 接收 JSON body: { schedule_id }
  */
 router.post('/appointments', authenticateToken, requireRole(['Patient']), async (req, res) => {
-  const { patient_id, schedule_id } = req.body;
-  if (!patient_id || !schedule_id) return res.status(400).json({ error: 'Missing patient_id or schedule_id' });
+  const { schedule_id } = req.body;
+  if (!schedule_id) return res.status(400).json({ error: 'Missing schedule_id' });
 
   let conn;
   try {
     // 1) 取得一個專用連線，準備手動管理交易
     conn = await pool.getConnection();
+
+    // 先查詢真正的 patient_id
+    const [pRows] = await conn.execute('SELECT patient_id FROM Patients WHERE user_id = ?', [req.user.user_id]);
+    if (pRows.length === 0) {
+      conn.release();
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    const real_patient_id = pRows[0].patient_id;
 
     /*
       2) 開啟交易（Transaction）
@@ -127,7 +135,7 @@ router.post('/appointments', authenticateToken, requireRole(['Patient']), async 
     const appt_no = sched.current_count + 1; // 排隊號碼
     const [ins] = await conn.execute(
       'INSERT INTO Appointments (patient_id, schedule_id, appt_no, status, created_at) VALUES (?, ?, ?, ?, NOW())',
-      [patient_id, schedule_id, appt_no, 'Pending']
+      [real_patient_id, schedule_id, appt_no, 'Pending']
     );
 
     await conn.execute('UPDATE Schedules SET current_count = current_count + 1 WHERE schedule_id = ?', [schedule_id]);
@@ -203,6 +211,9 @@ router.post('/appointments', authenticateToken, requireRole(['Patient']), async 
       return res.json({ schedule_id: ins.insertId });
     } catch (err) {
       console.error(err);
+      if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+        return res.status(400).json({ error: '指定的醫生或櫃台人員不存在 (Foreign Key 錯誤)' });
+      }
       return res.status(500).json({ error: 'DB error' });
     }
   });
@@ -234,6 +245,31 @@ router.post('/appointments', authenticateToken, requireRole(['Patient']), async 
       } else {
         return res.status(400).json({ error: 'Provide id_number or appt_no' });
       }
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * GET /api/users
+   * 櫃台查詢所有使用者（含角色與各自身分ID）
+   */
+  router.get('/users', authenticateToken, requireRole(['Staff']), async (req, res) => {
+    try {
+      const sql = `
+        SELECT u.user_id, u.username, u.role, 
+               p.patient_id, p.id_number, p.name AS patient_name,
+               d.doctor_id, d.doctor_name,
+               s.staff_id, s.staff_name
+        FROM Users u
+        LEFT JOIN Patients p ON u.user_id = p.user_id
+        LEFT JOIN Doctors d ON u.user_id = d.user_id
+        LEFT JOIN Staffs s ON u.user_id = s.user_id
+        ORDER BY u.user_id ASC
+      `;
+      const [rows] = await pool.execute(sql);
+      return res.json(rows);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Internal server error' });

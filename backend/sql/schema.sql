@@ -1,6 +1,6 @@
 -- Schema for small clinic appointment system
-CREATE DATABASE IF NOT EXISTS clinic_db;
-USE clinic_db;
+CREATE DATABASE IF NOT EXISTS clinicdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE clinicdb;
 
 CREATE TABLE IF NOT EXISTS Users (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
